@@ -1,0 +1,16 @@
+*.props
+*.nuget.g.targets
+*.dll
+*.pdb
+*.exe
+*.cache
+*.user
+*.suo
+*.userosscache
+*.sln.ide
+*.sln.docstates 
+*/bin
+*/obj
+*/.vs
+*/.vscode
+*/.idea
