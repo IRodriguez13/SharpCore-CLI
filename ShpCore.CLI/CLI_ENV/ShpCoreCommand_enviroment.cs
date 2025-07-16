@@ -319,6 +319,17 @@ public static class SharpCoreCLI
         --protocol    [namedpipe|grpc|unix]        Protocolo de transporte
         --adapter     [forge|gba|ps2]              Adaptador (consola/juego destino)
         --payload     path/to/payload.json         Ruta del archivo de instrucción
+        --dev         [true|false]                 Modo desarrollador (usa el kernel referenciado en lugar del compilado)
+        --utils       Muestra esta ayuda
+        --kernel-check                              Consulta si hay una nueva versión del kernel disponible
+        --kernel-rollback                           Vuelve a la versión anterior del kernel (si existe)
+        --kernel-add-local path/to/kernel --version X.Y.Z  Registra un kernel compilado localmente
+        --kernel-list                               Lista los kernels instalados localmente
+        --kernel-switch --version X.Y.Z             Activa otra versión del kernel
+        --kernel-update                             Descarga la última versión del kernel
+        --kernel-log-path                           Muestra la ubicación del archivo de logs del núcleo
+        --corefetch                                 Muestra información del núcleo SharpCore y del usuario
+        --help                                      Muestra esta ayuda
 
         Ejemplo:
         sharpcore run --protocol namedpipe --adapter forge --payload ./mods/axel.json"
