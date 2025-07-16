@@ -4,8 +4,8 @@ using System.Runtime.InteropServices;
 using SharpCore.CLI.Env.FileManagement;
 using System.Text.Json;
 using Kernel.Boot.System;
-using SharpCore.Abstractions;
 #if DEV_Kernel
+using SharpCore.Abstractions;
 using SharpCore.Kernel.Init;
 #endif
 
@@ -24,7 +24,7 @@ public static class SharpCoreCLI
 
         // Muestra el banner y la información del núcleo ni bien se inicia el CLI en color blanco y amarillo
         Console.ForegroundColor = ConsoleColor.White;
-        CoreFecth();
+        Welcome();
         Console.ResetColor();
 
 
@@ -257,17 +257,17 @@ public static class SharpCoreCLI
                 try
                 {
 
-                #if DEV_Kernel
+#if DEV_Kernel
 
                     // Requiere que el kernel esté referenciado en tiempo de desarrollo
                     IKernelEntryPoint devKernel = new SharpCore.Kernel.Init.SharpCoreKernel();
                     devKernel.Run(payloadPath, protocol, adapterPath, true);
 
-                #else
+#else
 
                     KernelLog.Panic("[DevMode] No se puede ejecutar en modo desarrollo sin el kernel referenciado.");
 
-                #endif
+#endif
 
                 }
                 catch (Exception ex)
@@ -327,8 +327,14 @@ public static class SharpCoreCLI
 
     private static void CoreFecth()
     {
-        string banner = File.ReadAllText("Banner.txt");
+        string banner = File.ReadAllText("Short_Banner.txt");
         Console.WriteLine(banner);
+    }
+
+    private static void Welcome()
+    {
+        string welcome = File.ReadAllText("Banner.txt");
+        Console.WriteLine(welcome);
     }
 
 }
