@@ -1,14 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using ShpCore.Logging;
 
 namespace SharpCore.CLI.Env.FileManagement;
 
-public static class SharpCoreHome
+public static class SharpCoreFM
 {
     public static bool IsDevMode { get; set; } = false;
     public static string Root => Path.Combine(
@@ -16,6 +11,8 @@ public static class SharpCoreHome
         ".sharpcore"
     );
 
+    public static string InitStateFile => Path.Combine(Root, ".initialized");
+    public static bool IsInitialized => File.Exists(InitStateFile);
     public static string KernelsDir => Path.Combine(Root, "kernels");
     public static string LogsDir => Path.Combine(Root, "logs");
     public static string ActiveKernelFile => Path.Combine(KernelsDir, "active.txt");
@@ -48,6 +45,27 @@ public static class SharpCoreHome
             File.WriteAllText(VersionMetadataFile, "[]"); // JSON vacío, lista de versiones
     }
 
+    public static void Initialize()
+    {
+        EnsureStructure();
+        if (IsInitialized)
+        {
+            KernelLog.Warn("SharpCore CLI is already initialized.");
+            return;
+        }
+
+        try
+        {
+            File.WriteAllText(InitStateFile, "true");
+            KernelLog.Info("✔ SharpCore CLI inicializado correctamente.");
+        }
+        catch (Exception ex)
+        {
+            KernelLog.Panic("Error al inicializar SharpCore CLI.", ex);
+        }
+
+    }
+
     public static void AddVersionToMetadata(string version)
     {
         EnsureStructure();
@@ -70,3 +88,5 @@ public static class SharpCoreHome
     }
 
 }
+
+

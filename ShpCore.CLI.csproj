@@ -10,7 +10,7 @@
   </ItemGroup>
   
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <ProjectReference Include="..\SharpCore.Kernel\SharpCore.Kernel.csproj" />
+    <ProjectReference Include="SharpCore.Kernel\SharpCore.Kernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,6 +19,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>sharpcore</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
