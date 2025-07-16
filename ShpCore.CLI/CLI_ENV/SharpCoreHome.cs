@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using ShpCore.Logging;
 
@@ -9,6 +10,7 @@ namespace SharpCore.CLI.Env.FileManagement;
 
 public static class SharpCoreHome
 {
+    public static bool IsDevMode { get; set; } = false;
     public static string Root => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".sharpcore"
@@ -19,8 +21,8 @@ public static class SharpCoreHome
     public static string ActiveKernelFile => Path.Combine(KernelsDir, "active.txt");
     public static string MetadataDir => Path.Combine(Root, "metadata");
     public static string VersionMetadataFile => Path.Combine(MetadataDir, "avalaible.json");
-    public static string GetKernelDll(string version) =>  Path.Combine(KernelsDir, version, "sharpcore.kernel.dll");
-    public static string ActiveKernelDll =>  GetKernelDll(File.ReadAllText(ActiveKernelFile).Trim());
+    public static string GetKernelDll(string version) => Path.Combine(KernelsDir, version, "sharpcore.kernel.dll");
+    public static string ActiveKernelDll => GetKernelDll(File.ReadAllText(ActiveKernelFile).Trim());
 
     public static string[] GetInstalledVersions()
     {
@@ -36,14 +38,14 @@ public static class SharpCoreHome
         Directory.CreateDirectory(KernelsDir);
         Directory.CreateDirectory(LogsDir);
         Directory.CreateDirectory(MetadataDir);
-    
-            // Active kernel version
+
+        // Active kernel version
         if (!File.Exists(ActiveKernelFile))
-                File.WriteAllText(ActiveKernelFile, VersionMetadataFile); // o dejarlo vacío si no hay una por defecto
+            File.WriteAllText(ActiveKernelFile, "v0.0.1"); // o dejarlo vacío si no hay una por defecto
 
         // Available versions metadata
         if (!File.Exists(VersionMetadataFile))
-                File.WriteAllText(VersionMetadataFile, "[]"); // JSON vacío, lista de versiones
+            File.WriteAllText(VersionMetadataFile, "[]"); // JSON vacío, lista de versiones
     }
 
     public static void AddVersionToMetadata(string version)

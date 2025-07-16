@@ -1,14 +1,13 @@
 using System.CommandLine;
-using System;
-using System.IO;
 using ShpCore.Logging;
-using System.Threading.Tasks;
-using SharpCore.Kernel.Init;
 using System.Runtime.InteropServices;
 using SharpCore.CLI.Env.FileManagement;
-using System.Linq;
 using System.Text.Json;
-using System.Collections.Generic;
+using Kernel.Boot.System;
+using SharpCore.Abstractions;
+#if DEV_Kernel
+using SharpCore.Kernel.Init;
+#endif
 
 
 // USO DE EJEMPLO: sharpcore run --protocol namedpipe --adapter forge --payload ./mods/axel.json
@@ -38,6 +37,12 @@ public static class SharpCoreCLI
         {
             IsRequired = false
         };
+
+        var devFlag = new Option<bool>("--dev", () => false, "Modo desarrollador (usa el kernel referenciado en lugar del compilado)")
+        {
+            IsRequired = false
+        };
+
 
         Command kernelCheck = new("-kernel-check", "Consulta si hay una nueva versión disponible");
 
@@ -212,11 +217,12 @@ public static class SharpCoreCLI
         Command runCommand = new("run", "Ejecuta un payload contra el núcleo");
         runCommand.AddOption(protocolOption);
         runCommand.AddOption(adapterOption);
+        runCommand.AddOption(devFlag);
 
         Option<string> payloadOption = new("--payload", "Ruta al archivo JSON con el payload") { IsRequired = true };
         runCommand.AddOption(payloadOption);
 
-        runCommand.SetHandler((string payloadPath, string protocol, string adapterPath) =>
+        runCommand.SetHandler((string payloadPath, string protocol, string adapterPath, bool devMode) =>
         {
             if (!File.Exists(payloadPath))
             {
@@ -230,18 +236,64 @@ public static class SharpCoreCLI
                 return;
             }
 
-            try
+            if (!File.Exists(payloadPath))
             {
-                SharpCoreKernel.Run(payloadPath, protocol, adapterPath);
+                KernelLog.Panic($"[Kernel Loader] El payload no existe en la ruta: {payloadPath}");
+                return;
             }
-            catch (Exception ex)
+
+            if (!Directory.Exists(adapterPath))
             {
-                KernelLog.Panic($"Error al ejecutar SharpCore: {ex.Message}");
+                KernelLog.Panic($"[Kernel Loader] La ruta del adaptador no existe: {adapterPath}");
+                return;
             }
-        }, payloadOption, protocolOption, adapterOption);
+
+            if (devMode)
+            {
+
+                KernelLog.Debug("[CLI MODE] Modo de desarrollo activado. init con Kernel referenciado localmente.");
 
 
-// =========== Comandos del CLI registrados ===========
+                try
+                {
+
+                #if DEV_Kernel
+
+                    // Requiere que el kernel esté referenciado en tiempo de desarrollo
+                    IKernelEntryPoint devKernel = new SharpCore.Kernel.Init.SharpCoreKernel();
+                    devKernel.Run(payloadPath, protocol, adapterPath, true);
+
+                #else
+
+                    KernelLog.Panic("[DevMode] No se puede ejecutar en modo desarrollo sin el kernel referenciado.");
+
+                #endif
+
+                }
+                catch (Exception ex)
+                {
+                    KernelLog.Panic("[DevMode] Fallo al ejecutar el kernel en modo desarrollo.", ex);
+                }
+
+            }
+            else
+            {
+                try
+                {
+                    Boot_System.BootActiveKernel(SharpCoreHome.ActiveKernelDll, payloadPath, protocol, adapterPath);
+                }
+                catch (Exception ex)
+                {
+
+                    KernelLog.Panic("[Kernel Loader] Fallo al cargar el kernel compilado.", ex);
+
+                }
+            }
+
+        }, payloadOption, protocolOption, adapterOption, devFlag);
+
+
+        // =========== Comandos del CLI registrados ===========
 
         root.AddCommand(runCommand);
         root.AddCommand(HelpCommand);
@@ -253,6 +305,7 @@ public static class SharpCoreCLI
         root.AddCommand(kernelRollback);
         root.AddCommand(kernelAddLocal);
         root.AddCommand(kernelLogPath);
+
 
         await root.InvokeAsync(args);
     }
