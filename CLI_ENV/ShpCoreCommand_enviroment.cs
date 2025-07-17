@@ -34,12 +34,17 @@ public static class SharpCoreCLI
         // Si se inicializa correctamente, muestra un mensaje de éxito
         // Si hay un error al crear la estructura, muestra un mensaje de error
         Command initCommand = new("init", "Inicializa la estructura base de SharpCore");
+        initCommand.AddAlias("--i");
+        initCommand.AddAlias("--init");
         initCommand.SetHandler(() =>
         {
 
             SharpCoreFM.EnsureStructure();
 
-            KernelLog.Info("✔ SharpCore inicializado correctamente. Estructura creada en: " + SharpCoreFM.Root);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("[INFO] ✔ SharpCore inicializado correctamente. Estructura creada en: " + SharpCoreFM.Root);
+            Console.ResetColor();
+
 
             SharpCoreFM.Initialize();
 
@@ -261,7 +266,8 @@ public static class SharpCoreCLI
 
         // Comando para mostrar información del kernel. mi versión de neofetch
         Command neofetch = new("corefetch", "Muestra información del núcleo SharpCore");
-
+        neofetch.AddAlias("--cf");
+        neofetch.AddAlias("--corefetch");
         neofetch.SetHandler(() =>
         {
             CoreFecth();
@@ -277,9 +283,9 @@ public static class SharpCoreCLI
             Console.ForegroundColor = ConsoleColor.Yellow;
 
             Console.WriteLine($"Kernel version: {version}");
-            Console.WriteLine("Author: Iván Rodriguez (ivanr013) <ivanrwcm25@gmail.com>");
+            Console.WriteLine("Author: Iván E. Rodriguez <ivanrwcm25@gmail.com>");
             Console.WriteLine($"Runtime: {os} {arch} / {runtime}");
-            Console.WriteLine("GitHub: https://github.com/IRodriguez13/SharpCore_forge");
+            Console.WriteLine("GitHub: https://github.com/IRodriguez13/SharpCore-Kernel");
             Console.WriteLine("Adapter: No selected (use --adapter /path/to/adapter)");
             Console.WriteLine("ASCII font: Banner3 (logo), 3x5 (version)");
             Console.WriteLine("License: GPL-3.0");
@@ -319,7 +325,7 @@ public static class SharpCoreCLI
         runCommand.AddOption(adapterOption);
         runCommand.AddOption(devFlag);
         Option<string> commandOption = new("--cmd", "Comando directo para ejecución remota (en vez de pasar JSON)");
-        Option<string> payloadOption = new("--payload", "Ruta al archivo JSON con el payload") { IsRequired = true };
+        Option<string> payloadOption = new("--payload", "Ruta al archivo JSON con el payload") { IsRequired = false };
         runCommand.AddOption(payloadOption);
 
         runCommand.SetHandler((string payloadPath, string protocol, string adapterPath, bool devMode, string commandInput) =>
@@ -383,16 +389,16 @@ public static class SharpCoreCLI
 
 
 #if DEV_Kernel
-                        // =========== Modo desarrollo: Ejecuta el kernel referenciado en el proyecto ===========
+                    // =========== Modo desarrollo: Ejecuta el kernel referenciado en el proyecto ===========
 
-                        if (!string.IsNullOrEmpty(commandInput))
-                        {
-                            var json = SharpCoreFM.GenerateCommandPayload(commandInput);
-                            var bridge = ProtocolFactory.Get(protocol).CreateBridge(adapterPath);
-                            bridge.Start();
-                            bridge.Send(json);
-                            return; 
-                        }
+                    if (!string.IsNullOrEmpty(commandInput))
+                    {
+                        var json = SharpCoreFM.GenerateCommandPayload(commandInput);
+                        var bridge = ProtocolFactory.Get(protocol).CreateBridge(adapterPath);
+                        bridge.Start();
+                        bridge.Send(json);
+                        return;
+                    }
 
 
                     // Requiere que el kernel esté referenciado en tiempo de dev
@@ -525,7 +531,18 @@ public static class SharpCoreCLI
     private static void Status()
     {
         Console.WriteLine($"✔ Directorio raíz: {SharpCoreFM.Root}");
-        Console.WriteLine($"✔ Kernels instalados: {string.Join(", ", SharpCoreFM.GetInstalledVersions())}");
+
+        string installedKernels = string.Join(", ", SharpCoreFM.GetInstalledVersions());
+        if (installedKernels == "")
+        {
+            Console.WriteLine("✔ Kernels SharpCore instalados: No se detectaron instalaciones compiladas. Compilá el tuyo en desde el repositorio remoto o referenciá uno en ShpCore.CLI.csproj.");
+        }
+        else
+        {
+            Console.WriteLine($"✔ Kernels instalados: {string.Join(", ", SharpCoreFM.GetInstalledVersions())}");
+
+        }
+
         Console.WriteLine($"✔ Versión activa: {File.ReadAllText(SharpCoreFM.ActiveKernelFile).Trim()}");
     }
 
