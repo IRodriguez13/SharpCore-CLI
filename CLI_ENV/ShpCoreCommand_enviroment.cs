@@ -11,8 +11,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 #if DEV_Kernel
-using SharpCore.Abstractions;
 using SharpCore.Kernel.Init;
+using ShpCore.Launcher.Core.Factory;
+using MSharp.Launcher.Core.Bridge;
 #endif
 
 
@@ -24,12 +25,6 @@ public static class SharpCoreCLI
 {
     public static async Task Run(string[] args)
     {
-
-        if (!File.Exists(SharpCoreFM.InitStateFile))
-        {
-            KernelLog.Panic("[CLI] SharpCore no está inicializado. Ejecutá 'sharpcore init' primero.");
-            return;
-        }
 
         // Comando para inicializar la estructura base de SharpCore
         // Crea los directorios necesarios y el archivo de estado
@@ -100,7 +95,7 @@ public static class SharpCoreCLI
         Option<string> protocolOption = new Option<string>("--protocol", "Protocolo de transporte")
         {
             IsRequired = false
-        }.FromAmong("namedpipe", "grpc", "unix");
+        }.FromAmong("namedpipe", "grpc", "unix", "remote-linux");
 
         Option<string> adapterOption = new("--adapter", "Ruta al adaptador")
         {
@@ -281,13 +276,13 @@ public static class SharpCoreCLI
 
             Console.ForegroundColor = ConsoleColor.Yellow;
 
-            KernelLog.Info($"Kernel version: {version}");
-            KernelLog.Info("Author: Iván Rodriguez (ivanr013) <ivanrwcm25@gmail.com>");
-            KernelLog.Info($"Runtime: {os} {arch} / {runtime}");
-            KernelLog.Info("GitHub: https://github.com/IRodriguez13/SharpCore_forge");
-            KernelLog.Info("Adapter: No selected (use --adapter /path/to/adapter)");
-            KernelLog.Info("ASCII font: Banner3 (logo), 3x5 (version)");
-            KernelLog.Info("License: GPL-3.0");
+            Console.WriteLine($"Kernel version: {version}");
+            Console.WriteLine("Author: Iván Rodriguez (ivanr013) <ivanrwcm25@gmail.com>");
+            Console.WriteLine($"Runtime: {os} {arch} / {runtime}");
+            Console.WriteLine("GitHub: https://github.com/IRodriguez13/SharpCore_forge");
+            Console.WriteLine("Adapter: No selected (use --adapter /path/to/adapter)");
+            Console.WriteLine("ASCII font: Banner3 (logo), 3x5 (version)");
+            Console.WriteLine("License: GPL-3.0");
 
             Console.ResetColor();
         });
@@ -330,38 +325,35 @@ public static class SharpCoreCLI
         runCommand.SetHandler((string payloadPath, string protocol, string adapterPath, bool devMode, string commandInput) =>
         {
 
+            // El único protocolo remoto es por definicion "remote-linux" KISS
+            bool isLocalProtocol = protocol == "grpc" || protocol == "namedpipe" || protocol == "unix";
+
             if (!SharpCoreFM.IsInitialized)
             {
                 KernelLog.Panic("SharpCore no está inicializado. Ejecutá primero `sharpcore init`.");
                 return;
             }
 
-            if (!File.Exists(SharpCoreFM.ActiveKernelDll))
-            {
-                KernelLog.Panic("Dev, No se encontró el kernel activo. Ejecutá 'sharpcore kernel-update' o 'kernel-add-local' para registrar uno.");
-                return;
-            }
 
-
-            if (!File.Exists(payloadPath))
+            if (isLocalProtocol && !File.Exists(payloadPath))
             {
                 KernelLog.Panic($"(PAYLOAD) El archivo {payloadPath} no existe.");
                 return;
             }
 
-            if (!Directory.Exists(adapterPath))
+            if (isLocalProtocol && !Directory.Exists(adapterPath))
             {
                 KernelLog.Panic($"(ADAPTER) La ruta del adaptador '{adapterPath}' no existe. Asegurate de clonar el adaptador correspondiente.");
                 return;
             }
 
-            if (!File.Exists(payloadPath))
+            if (isLocalProtocol && !File.Exists(payloadPath))
             {
                 KernelLog.Panic($"[Kernel Loader] El payload no existe en la ruta: {payloadPath}");
                 return;
             }
 
-            if (!Directory.Exists(adapterPath))
+            if (isLocalProtocol && !Directory.Exists(adapterPath))
             {
                 KernelLog.Panic($"[Kernel Loader] La ruta del adaptador no existe: {adapterPath}");
                 return;
@@ -404,7 +396,7 @@ public static class SharpCoreCLI
 
 
                     // Requiere que el kernel esté referenciado en tiempo de dev
-                    IKernelEntryPoint devKernel = new SharpCore.Kernel.Init.SharpCoreKernel();
+                    var devKernel = new SharpCoreKernel();
                     devKernel.Run(payloadPath, protocol, adapterPath, true);
 
 #else
@@ -422,6 +414,13 @@ public static class SharpCoreCLI
             }
             else // =========  FALLBACK al kernel compilado por defecto en el release del entorno de consola  ===========
             {
+
+                if (!File.Exists(SharpCoreFM.ActiveKernelDll))
+                {
+                    KernelLog.Panic("Dev, No se encontró el kernel activo. Ejecutá 'sharpcore kernel-update' o 'kernel-add-local' para registrar uno.");
+                    return;
+                }
+
                 KernelLog.Info("[CLI MODE] Modo de producción activado. Ejecutando el kernel compilado.");
 
                 // Si se pasa un comando directo, lo convertimos a JSON y lo guardamos en un archivo temporal
@@ -468,7 +467,10 @@ public static class SharpCoreCLI
         root.AddCommand(kernelLogPath);
         root.AddCommand(initCommand);
         root.AddCommand(resetCommand);
-
+        root.AddGlobalOption(protocolOption);
+        root.AddGlobalOption(adapterOption);
+        root.AddGlobalOption(devFlag);
+        root.AddGlobalOption(commandOption);
 
         await root.InvokeAsync(args);
     }
@@ -483,8 +485,8 @@ public static class SharpCoreCLI
         Comandos:
         --init                                     Inicializa la estructura base de SharpCore
         --run                                      Ejecuta un payload contra el núcleo
-         reset --force                             Reinicia SharpCore CLI y borra su configuración
-         --cmd                                     Comando directo para ejecución remota a Linux(en vez de pasar JSON)
+        reset --force                             Reinicia SharpCore CLI y borra su configuración
+        --cmd                                     Comando directo para ejecución remota a Linux(en vez de pasar JSON)
         --status                                   Muestra el estado actual del CLI y del núcleo
         --protocol    [namedpipe|grpc|unix]        Protocolo de transporte
         --adapter     [forge|gba|ps2]              Adaptador (consola/juego destino)

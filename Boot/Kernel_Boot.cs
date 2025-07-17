@@ -2,6 +2,7 @@ using ShpCore.Logging;
 using SharpCore.CLI.Env.FileManagement;
 using System.Reflection;
 using System;
+using System.IO;
 
 namespace Kernel.Boot.System;
 

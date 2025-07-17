@@ -1,20 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Serilog" Version="4.3.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-  <!-- Deberías referenciar a tu kernel cuando lo clones acá -->
+    <!-- Deberías referenciar a tu kernel cuando lo clones acá -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Text.Json" Version="9.0.4" />
   </ItemGroup>
   
-  <ItemGroup Condition="'$(Configuration)' == 'DEV_Kernel'">
-    <ProjectReference Include="SharpCore.Kernel\SharpCore.Kernel.csproj" />
-  </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>DEV_Kernel</DefineConstants>
+  </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="ShpCore.Abstractions\SharpCore.Abstractions.csproj" />
+    <ProjectReference Include="../SharpCore-Kernel/ShpCore.Kernel/ShpCore.Kernel.csproj"/>
+  </ItemGroup>
+  <ItemGroup>
   </ItemGroup>
   <PropertyGroup>
     <OutputType>Exe</OutputType>
