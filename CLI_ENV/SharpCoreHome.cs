@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using ShpCore.Logging;
 
@@ -85,6 +89,22 @@ public static class SharpCoreFM
             File.WriteAllText(file, JsonSerializer.Serialize(versions, new JsonSerializerOptions { WriteIndented = true }));
             KernelLog.Info($"✔ Versión {version} añadida al registro remoto local.");
         }
+    }
+
+    // =====================  LINUX environment   ====================================
+    public static string GenerateCommandPayload(string rawCommand)
+    {
+        var payload = new
+        {
+            type = "remote_exec",
+            command = rawCommand,
+            timestamp = DateTime.UtcNow
+        };
+
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            WriteIndented = false
+        });
     }
 
 }

@@ -1,4 +1,6 @@
-﻿using Serilog;
+﻿using System;
+using System.IO;
+using Serilog;
 using Serilog.Events;
 
 namespace ShpCore.Logging;

@@ -1,9 +1,15 @@
 using System.CommandLine;
+
 using ShpCore.Logging;
 using System.Runtime.InteropServices;
 using SharpCore.CLI.Env.FileManagement;
 using System.Text.Json;
 using Kernel.Boot.System;
+using System.Threading.Tasks;
+using System.IO;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 #if DEV_Kernel
 using SharpCore.Abstractions;
 using SharpCore.Kernel.Init;
@@ -67,15 +73,14 @@ public static class SharpCoreCLI
         // Si no se usa --force, muestra un mensaje de advertencia y no hace nada
         // Ejemplo: sharpcore reset
         Command resetCommand = new("reset", "Reinicia SharpCore CLI y borra su configuración");
-        Option<bool> forceOption = new("--force", "Obliga el reinicio sin confirmación");
+        Option<bool> forceOption = new(new[] { "--force", "-f" }, "Obliga el reinicio sin confirmación");
         resetCommand.AddOption(forceOption);
-
         resetCommand.SetHandler((bool force) =>
         {
             if (!force)
             {
                 KernelLog.Warn("⚠ Este comando borra toda la configuración. Usá --force para confirmarlo.");
-                return;
+                return; // Esto ahora es válido porque está dentro de una lambda void
             }
 
             try
@@ -87,7 +92,8 @@ public static class SharpCoreCLI
             {
                 KernelLog.Panic("❌ No se pudo reiniciar SharpCore.", ex);
             }
-        });
+        },
+        forceOption); // Pasa el option como argumento al handler
 
         RootCommand root = new("CLI oficial de SharpCore") { Name = "shpcore" }; SharpCoreFM.EnsureStructure(); // <- Se asegura que todo exista
 
@@ -317,12 +323,13 @@ public static class SharpCoreCLI
         runCommand.AddOption(protocolOption);
         runCommand.AddOption(adapterOption);
         runCommand.AddOption(devFlag);
-
+        Option<string> commandOption = new("--cmd", "Comando directo para ejecución remota (en vez de pasar JSON)");
         Option<string> payloadOption = new("--payload", "Ruta al archivo JSON con el payload") { IsRequired = true };
         runCommand.AddOption(payloadOption);
 
-        runCommand.SetHandler((string payloadPath, string protocol, string adapterPath, bool devMode) =>
+        runCommand.SetHandler((string payloadPath, string protocol, string adapterPath, bool devMode, string commandInput) =>
         {
+
             if (!SharpCoreFM.IsInitialized)
             {
                 KernelLog.Panic("SharpCore no está inicializado. Ejecutá primero `sharpcore init`.");
@@ -360,6 +367,19 @@ public static class SharpCoreCLI
                 return;
             }
 
+            if (!string.IsNullOrEmpty(commandInput) && !devMode)
+            {
+                KernelLog.Panic("Comando directo (--cmd) solo puede utilizarse en modo desarrollador (--dev).");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(commandInput) && string.IsNullOrEmpty(payloadPath))
+            {
+                KernelLog.Panic("Debés pasar un payload (--payload) o un comando (--cmd).");
+                return;
+            }
+
+
             if (devMode)
             {
 
@@ -369,17 +389,29 @@ public static class SharpCoreCLI
                 try
                 {
 
-                #if DEV_Kernel
+
+#if DEV_Kernel
+                        // =========== Modo desarrollo: Ejecuta el kernel referenciado en el proyecto ===========
+
+                        if (!string.IsNullOrEmpty(commandInput))
+                        {
+                            var json = SharpCoreFM.GenerateCommandPayload(commandInput);
+                            var bridge = ProtocolFactory.Get(protocol).CreateBridge(adapterPath);
+                            bridge.Start();
+                            bridge.Send(json);
+                            return; 
+                        }
+
 
                     // Requiere que el kernel esté referenciado en tiempo de dev
                     IKernelEntryPoint devKernel = new SharpCore.Kernel.Init.SharpCoreKernel();
                     devKernel.Run(payloadPath, protocol, adapterPath, true);
 
-                #else
+#else
 
                     KernelLog.Panic("[DevMode] Dev, No se puede ejecutar en modo desarrollo sin tu kernel referenciado en el csproj.");
                     return;
-                #endif
+#endif
 
                 }
                 catch (Exception ex)
@@ -388,8 +420,25 @@ public static class SharpCoreCLI
                 }
 
             }
-            else
+            else // =========  FALLBACK al kernel compilado por defecto en el release del entorno de consola  ===========
             {
+                KernelLog.Info("[CLI MODE] Modo de producción activado. Ejecutando el kernel compilado.");
+
+                // Si se pasa un comando directo, lo convertimos a JSON y lo guardamos en un archivo temporal
+                // para que el kernel compilado lo pueda leer.
+                // Si no se pasa un comando, se usa el payload como está.
+                if (!string.IsNullOrEmpty(commandInput))
+                {
+                    var jsonPayload = SharpCoreFM.GenerateCommandPayload(commandInput);
+
+                    string tempJsonPath = Path.Combine(Path.GetTempPath(), $"sharpcore_cmd_{Guid.NewGuid()}.json");
+                    File.WriteAllText(tempJsonPath, jsonPayload);
+
+                    // Overwrite del payloadPath para que el kernel compilado lo lea desde ahí
+                    payloadPath = tempJsonPath;
+                }
+
+
                 try
                 {
                     Boot_System.BootActiveKernel(SharpCoreFM.ActiveKernelDll, payloadPath, protocol, adapterPath);
@@ -402,10 +451,10 @@ public static class SharpCoreCLI
                 }
             }
 
-        }, payloadOption, protocolOption, adapterOption, devFlag);
+        }, payloadOption, protocolOption, adapterOption, devFlag, commandOption);
 
 
-    // =========== Comandos del CLI registrados ===========
+        // =========== Comandos del CLI registrados ===========
 
         root.AddCommand(runCommand);
         root.AddCommand(HelpCommand);
@@ -434,7 +483,8 @@ public static class SharpCoreCLI
         Comandos:
         --init                                     Inicializa la estructura base de SharpCore
         --run                                      Ejecuta un payload contra el núcleo
-         reset --force                            Reinicia SharpCore CLI y borra su configuración
+         reset --force                             Reinicia SharpCore CLI y borra su configuración
+         --cmd                                     Comando directo para ejecución remota a Linux(en vez de pasar JSON)
         --status                                   Muestra el estado actual del CLI y del núcleo
         --protocol    [namedpipe|grpc|unix]        Protocolo de transporte
         --adapter     [forge|gba|ps2]              Adaptador (consola/juego destino)

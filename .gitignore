@@ -14,3 +14,13 @@
 */.vs
 */.vscode
 */.idea
+*/Debug
+*/Release
+*.nupkg
+*.snupkg
+*.vsix
+*.vstemplate
+*.dbmdl
+*.dbproj.schemaview
+*.dbmdl.user
+*/net
