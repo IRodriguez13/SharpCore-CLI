@@ -337,7 +337,7 @@ public static class SharpCoreCLI
             {
                 KernelLog.Panic($"[VM INIT] Falló el arranque de la VM", ex);
             }
-            
+
         }, imageOption, qemuJsonOption);
 
         #endregion
@@ -773,8 +773,6 @@ public static class SharpCoreCLI
 
         return cmd;
     }
-
-
 
 }
 
