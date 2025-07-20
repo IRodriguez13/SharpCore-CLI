@@ -106,6 +106,11 @@ public static class SharpCoreFM
             WriteIndented = false
         });
     }
+    // =====================  VM Debian Lite image management   ====================================
+    public static string GetVmImagesPath()
+    {
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".sharpcore", "vm-images");
+    }
 }
 
 

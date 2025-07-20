@@ -1,0 +1,7 @@
+{
+  "MemoryMb": 2048,
+  "Port": 5000,
+  "UseSnapshot": false,
+  "UseNographic": true,
+  "ExtraArgs": "-netdev user,id=net0,hostfwd=tcp::5000-:5000 -device e1000,netdev=net0"
+}

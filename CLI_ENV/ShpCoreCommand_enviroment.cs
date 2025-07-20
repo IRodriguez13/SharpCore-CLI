@@ -10,6 +10,10 @@ using System.IO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ShpCore.Kernel.VirtualMachineSubsystem;
+using ShpCore.Kernel.RemoteLinuxConnection;
+using SharpCore.CLI.Env.Helpers;
+
 #if DEV_Kernel
 using SharpCore.Kernel.Init;
 using ShpCore.Launcher.Core.Factory;
@@ -292,6 +296,51 @@ public static class SharpCoreCLI
 
             Console.ResetColor();
         });
+        #region Comandos de la máquina virtual Linux
+
+        var kernelCommand = new Command("kernel", "Acciones sobre kernels SharpCore");
+        var remoteCommand = new Command("remote", "Habla con kernels Linux remotos por red");
+        var vmCommand = new Command("vm", "Corre una máquina virtual y ejecuta comandos");
+
+        kernelCommand.AddCommand(BuildKernelRunCommand());
+        remoteCommand.AddCommand(BuildRemoteRunCommand());
+        vmCommand.AddCommand(BuildVmStartCommand());
+
+        Command vmInit = new("vm-init", "Inicializa una VM con una imagen disponible");
+        Option<string> imageOption = new("--image", "Nombre de la imagen (debian-lite, fedora-core, etc)") { IsRequired = true };
+        Option<string> qemuJsonOption = new("--qemu-options", "Ruta al archivo JSON con opciones de QEMU") { IsRequired = false };
+
+        vmInit.AddOption(imageOption);
+        vmInit.AddOption(qemuJsonOption);
+
+        vmInit.SetHandler((string image, string qemuOptionsPath) =>
+        {
+            try
+            {
+                string imagesDir = Path.Combine(SharpCoreFM.GetVmImagesPath(), $"{image}.qcow2");
+
+                if (!File.Exists(imagesDir))
+                {
+                    KernelLog.Panic($"No se encontró la imagen '{image}'. Buscada en: {imagesDir}");
+                    return;
+                }
+
+                var options = QemuOptionsLoader.Load(qemuOptionsPath);
+                options.ImagePath = imagesDir;
+
+                var vm = new QemuBridgeConnection(options);
+                vm.Start();
+
+                KernelLog.Info($"[VM] {image} corriendo en {options.Port}");
+            }
+            catch (Exception ex)
+            {
+                KernelLog.Panic($"[VM INIT] Falló el arranque de la VM", ex);
+            }
+            
+        }, imageOption, qemuJsonOption);
+
+        #endregion
 
         // Comando de ayuda del CLI
         // Muestra la ayuda del CLI y los comandos disponibles
@@ -324,15 +373,25 @@ public static class SharpCoreCLI
         runCommand.AddOption(protocolOption);
         runCommand.AddOption(adapterOption);
         runCommand.AddOption(devFlag);
+        Option<bool> vmFlag = new("--vm", "Usa una máquina virtual local como backend");
+        Option<string> qemuOptionsPath = new("--qemu-options", "Ruta al archivo JSON con opciones de QEMU");
+        Option<string> imagePathOption = new("--image-path", "Ruta a la imagen QCOW2");
         Option<string> commandOption = new("--cmd", "Comando directo para ejecución remota (en vez de pasar JSON)");
         Option<string> payloadOption = new("--payload", "Ruta al archivo JSON con el payload") { IsRequired = false };
         runCommand.AddOption(payloadOption);
 
-        runCommand.SetHandler((string payloadPath, string protocol, string adapterPath, bool devMode, string commandInput) =>
+        runCommand.SetHandler((string payloadPath, string protocol, string adapterPath, bool devMode, string commandInput, string imagePath, string qemuOptions, bool vmFlag) =>
         {
 
             // El único protocolo remoto es por definicion "remote-linux" KISS
-            bool isLocalProtocol = protocol == "grpc" || protocol == "namedpipe" || protocol == "unix";
+            bool usesFileBasedAdapter = protocol is "grpc" or "namedpipe" or "unix";
+
+            if (vmFlag && protocol != "vm")
+            {
+                KernelLog.Panic("[--vm] Flag activa pero protocolo no es 'vm'. Usá --protocol vm");
+                return;
+            }
+
 
             if (!SharpCoreFM.IsInitialized)
             {
@@ -341,25 +400,25 @@ public static class SharpCoreCLI
             }
 
 
-            if (isLocalProtocol && !File.Exists(payloadPath))
+            if (usesFileBasedAdapter && !File.Exists(payloadPath))
             {
                 KernelLog.Panic($"(PAYLOAD) El archivo {payloadPath} no existe.");
                 return;
             }
 
-            if (isLocalProtocol && !Directory.Exists(adapterPath))
+            if (usesFileBasedAdapter && !Directory.Exists(adapterPath))
             {
                 KernelLog.Panic($"(ADAPTER) La ruta del adaptador '{adapterPath}' no existe. Asegurate de clonar el adaptador correspondiente.");
                 return;
             }
 
-            if (isLocalProtocol && !File.Exists(payloadPath))
+            if (usesFileBasedAdapter && !File.Exists(payloadPath))
             {
                 KernelLog.Panic($"[Kernel Loader] El payload no existe en la ruta: {payloadPath}");
                 return;
             }
 
-            if (isLocalProtocol && !Directory.Exists(adapterPath))
+            if (usesFileBasedAdapter && !Directory.Exists(adapterPath))
             {
                 KernelLog.Panic($"[Kernel Loader] La ruta del adaptador no existe: {adapterPath}");
                 return;
@@ -377,6 +436,34 @@ public static class SharpCoreCLI
                 return;
             }
 
+
+            if (vmFlag)
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(imagePath) || string.IsNullOrEmpty(qemuOptions))
+                    {
+                        KernelLog.Panic("[--vm] Faltan opciones: asegurate de pasar --image-path y --qemu-options con un JSON válido.");
+                        return;
+                    }
+
+                    string optionsJson = File.ReadAllText(qemuOptions);
+                    var options = JsonSerializer.Deserialize<QemuOptions>(optionsJson);
+                    options!.ImagePath = imagePath; // lo forzamos por CLI, opcional
+
+                    var qemu = new QemuBridgeConnection(options);
+                    qemu.Start();
+
+                    if (!string.IsNullOrEmpty(commandInput)) qemu.Send(commandInput);
+
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    KernelLog.Panic("[QEMU] Fallo al levantar la VM o ejecutar comando.", ex);
+                    return;
+                }
+            }
 
             if (devMode)
             {
@@ -399,6 +486,9 @@ public static class SharpCoreCLI
                         bridge.Send(json);
                         return;
                     }
+
+
+
 
 
                     // Requiere que el kernel esté referenciado en tiempo de dev
@@ -456,7 +546,7 @@ public static class SharpCoreCLI
                 }
             }
 
-        }, payloadOption, protocolOption, adapterOption, devFlag, commandOption);
+        }, payloadOption, protocolOption, adapterOption, devFlag, commandOption, imagePathOption, qemuOptionsPath, vmFlag);
 
 
         // =========== Comandos del CLI registrados ===========
@@ -473,6 +563,14 @@ public static class SharpCoreCLI
         root.AddCommand(kernelLogPath);
         root.AddCommand(initCommand);
         root.AddCommand(resetCommand);
+        root.AddCommand(vmInit);
+        root.AddCommand(kernelCommand);
+        root.AddCommand(remoteCommand);
+        root.AddCommand(vmCommand);
+        root.AddCommand(BuildDockerStartCommand());
+        runCommand.AddOption(imagePathOption);
+        runCommand.AddOption(qemuOptionsPath);
+        runCommand.AddOption(vmFlag);
         root.AddGlobalOption(protocolOption);
         root.AddGlobalOption(adapterOption);
         root.AddGlobalOption(devFlag);
@@ -508,6 +606,11 @@ public static class SharpCoreCLI
         --kernel-log-path                           Muestra la ubicación del archivo de logs del núcleo
         --corefetch                                 Muestra información del núcleo SharpCore y del usuario
         --help                                      Muestra esta ayuda
+
+        ==== Comandos Linux ====
+
+        sharpcore vm init --image debian-lite --qemu-options ./qemu.json
+        sharpcore vm cmd
 
         Ejemplo:
         sharpcore run --protocol namedpipe --adapter forge --payload ./mods/axel.json"
@@ -545,6 +648,133 @@ public static class SharpCoreCLI
 
         Console.WriteLine($"✔ Versión activa: {File.ReadAllText(SharpCoreFM.ActiveKernelFile).Trim()}");
     }
+
+    public static Command BuildRemoteRunCommand()
+    {
+        var cmd = new Command("run", "Ejecuta un comando contra un kernel Linux remoto");
+
+        var commandOption = new Option<string>("--cmd", "Comando a ejecutar (ej: 'ls -la')") { IsRequired = true };
+        var adapterOption = new Option<string>("--adapter", "URL del adaptador HTTP remoto") { IsRequired = true };
+
+        cmd.AddOption(commandOption);
+        cmd.AddOption(adapterOption);
+
+        cmd.SetHandler((string commandInput, string adapterUrl) =>
+        {
+            var json = JsonSerializer.Serialize(new { command = commandInput });
+
+            var bridge = new RemoteLinuxBridgeConnection(adapterUrl);
+            bridge.Start();
+            bridge.Send(json);
+
+        }, commandOption, adapterOption);
+
+        return cmd;
+    }
+
+    public static Command BuildKernelRunCommand()
+    {
+        var cmd = new Command("kernel-run", "Ejecuta un payload usando el kernel local de SharpCore");
+
+        var payloadOption = new Option<string>("--payload", "Ruta al payload JSON") { IsRequired = true };
+        var protocolOption = new Option<string>("--protocol", "Protocolo a usar (ej: namedpipe, remote-linux, vm)") { IsRequired = true };
+        var adapterOption = new Option<string>("--adapter", "Ruta o URL del adaptador correspondiente") { IsRequired = true };
+
+        cmd.AddOption(payloadOption);
+        cmd.AddOption(protocolOption);
+        cmd.AddOption(adapterOption);
+
+        cmd.SetHandler((string payloadPath, string protocol, string adapterPath) =>
+        {
+            if (!File.Exists(payloadPath))
+            {
+                KernelLog.Panic($"[kernel-run] Payload no encontrado en {payloadPath}");
+                return;
+            }
+
+            var kernel = new SharpCoreKernel();
+            kernel.Run(payloadPath, protocol, adapterPath, true);
+        }, payloadOption, protocolOption, adapterOption);
+
+        return cmd;
+    }
+
+
+    public static Command BuildVmStartCommand()
+    {
+        var cmd = new Command("vm-start", "Inicia una máquina virtual SharpCore con shell interactiva");
+
+        var imageOption = new Option<string>("--image", "Ruta a la imagen .qcow2") { IsRequired = true };
+        var qemuOptionsPath = new Option<string>("--qemu-options", "Ruta al JSON con opciones QEMU") { IsRequired = false };
+
+        cmd.AddOption(imageOption);
+        cmd.AddOption(qemuOptionsPath);
+
+        cmd.SetHandler((string imagePath, string? optsPath) =>
+        {
+            try
+            {
+                QemuOptions opts;
+
+                if (!string.IsNullOrEmpty(optsPath) && File.Exists(optsPath))
+                {
+                    var json = File.ReadAllText(optsPath);
+                    opts = JsonSerializer.Deserialize<QemuOptions>(json)!;
+                }
+                else
+                {
+                    opts = new QemuOptions();
+                }
+
+                opts.ImagePath = imagePath;
+                opts.UseNographic = false; // Importante: modo interactivo
+
+                var qemu = new QemuBridgeConnection(opts);
+                qemu.Start();
+
+            }
+            catch (Exception ex)
+            {
+                KernelLog.Panic("[vm-start] Falló al iniciar VM en modo interactivo", ex);
+            }
+
+        }, imageOption, qemuOptionsPath);
+
+        return cmd;
+    }
+
+    public static Command BuildDockerStartCommand()
+    {
+        var cmd = new Command("docker-start", "Inicia el servicio Docker dentro de la VM");
+
+        var portOpt = new Option<int>("--port", "Puerto donde escucha el bridge (default: 5000)") { IsRequired = false };
+        portOpt.SetDefaultValue(5000);
+
+        cmd.AddOption(portOpt);
+
+        cmd.SetHandler((int port) =>
+        {
+            try
+            {
+                var bridge = new RemoteLinuxBridgeConnection($"http://127.0.0.1:{port}/exec");
+                var json = JsonSerializer.Serialize(new { command = "service docker start" });
+
+                bridge.Start();
+                bridge.Send(json);
+
+                KernelLog.Info($"[docker-start] Docker iniciado en la VM.");
+            }
+            catch (Exception ex)
+            {
+                KernelLog.Panic("[docker-start] No se pudo iniciar Docker en la VM", ex);
+            }
+
+        }, portOpt);
+
+        return cmd;
+    }
+
+
 
 }
 
