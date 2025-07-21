@@ -11,7 +11,6 @@ public static class Boot_System
     public static void BootActiveKernel(string kernelPath, string payload, string protocol, string adapter)
     {
 
-
         if (!File.Exists(kernelPath))
         {
             KernelLog.Panic($"[CLI] El kernel activo no se encuentra en la ruta esperada: {kernelPath}");
