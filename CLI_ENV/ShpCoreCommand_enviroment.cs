@@ -1,5 +1,4 @@
 using System.CommandLine;
-
 using ShpCore.Logging;
 using System.Runtime.InteropServices;
 using SharpCore.CLI.Env.FileManagement;
@@ -15,26 +14,21 @@ using ShpCore.Kernel.RemoteLinuxConnection;
 using SharpCore.CLI.Env.Helpers;
 
 #if DEV_Kernel
+
 using SharpCore.Kernel.Init;
 using ShpCore.Launcher.Core.Factory;
 using MSharp.Launcher.Core.Bridge;
+
 #endif
 
 
 // USO DE EJEMPLO: sharpcore run --protocol namedpipe --adapter forge --payload ./mods/axel.json
-
 namespace SharpCore.CLI.Env;
 
 public static class SharpCoreCLI
 {
     public static async Task Run(string[] args)
     {
-
-        // Comando para inicializar la estructura base de SharpCore
-        // Crea los directorios necesarios y el archivo de estado
-        // Si ya está inicializado, muestra un mensaje de advertencia
-        // Si no, crea la estructura y el archivo de estado
-        // Ejemplo: sharpcore init
         // Si se inicializa correctamente, muestra un mensaje de éxito
         // Si hay un error al crear la estructura, muestra un mensaje de error
         Command initCommand = new("init", "Inicializa la estructura base de SharpCore");
@@ -313,6 +307,7 @@ public static class SharpCoreCLI
         vmInit.AddOption(imageOption);
         vmInit.AddOption(qemuJsonOption);
 
+#region VM Init Handler 
         vmInit.SetHandler((string image, string qemuOptionsPath) =>
         {
             try
@@ -469,15 +464,11 @@ public static class SharpCoreCLI
             {
 
                 KernelLog.Debug("[CLI MODE] Modo de desarrollo activado. init con Kernel referenciado localmente.");
-
-
                 try
                 {
 
-
 #if DEV_Kernel
                     // =========== Modo desarrollo: Ejecuta el kernel referenciado en el proyecto ===========
-
                     if (!string.IsNullOrEmpty(commandInput))
                     {
                         var json = SharpCoreFM.GenerateCommandPayload(commandInput);
@@ -486,10 +477,6 @@ public static class SharpCoreCLI
                         bridge.Send(json);
                         return;
                     }
-
-
-
-
 
                     // Requiere que el kernel esté referenciado en tiempo de dev
                     var devKernel = new SharpCoreKernel();
@@ -533,21 +520,18 @@ public static class SharpCoreCLI
                     payloadPath = tempJsonPath;
                 }
 
-
                 try
                 {
                     Boot_System.BootActiveKernel(SharpCoreFM.ActiveKernelDll, payloadPath, protocol, adapterPath);
                 }
                 catch (Exception ex)
                 {
-
                     KernelLog.Panic("[Kernel Loader] Fallo crítico al cargar el kernel compilado.", ex);
-
                 }
             }
 
         }, payloadOption, protocolOption, adapterOption, devFlag, commandOption, imagePathOption, qemuOptionsPath, vmFlag);
-
+#endregion
 
         // =========== Comandos del CLI registrados ===========
 
@@ -791,7 +775,6 @@ public static class SharpCoreCLI
 
         return cmd;
     }
-
 }
 
 
