@@ -325,6 +325,7 @@ public static class SharpCoreCLI
                     return;
                 }
 
+
                 var options = QemuOptionsLoader.Load(qemuOptionsPath);
                 options.ImagePath = imagesDir;
 
@@ -383,7 +384,6 @@ public static class SharpCoreCLI
         runCommand.SetHandler((string payloadPath, string protocol, string adapterPath, bool devMode, string commandInput, string imagePath, string qemuOptions, bool vmFlag) =>
         {
 
-            // El único protocolo remoto es por definicion "remote-linux" KISS
             bool usesFileBasedAdapter = protocol is "grpc" or "namedpipe" or "unix";
 
             if (vmFlag && protocol != "vm")
@@ -714,20 +714,38 @@ public static class SharpCoreCLI
         {
             try
             {
-                QemuOptions opts;
-
-                if (!string.IsNullOrEmpty(optsPath) && File.Exists(optsPath))
-                {
-                    var json = File.ReadAllText(optsPath);
-                    opts = JsonSerializer.Deserialize<QemuOptions>(json)!;
-                }
-                else
-                {
-                    opts = new QemuOptions();
-                }
-
+                var opts = QemuOptionsLoader.Load(optsPath);
                 opts.ImagePath = imagePath;
-                opts.UseNographic = false; // Importante: modo interactivo
+
+                if (string.IsNullOrWhiteSpace(opts.ImagePath) || !File.Exists(opts.ImagePath))
+                {
+                    KernelLog.Panic($"[vm-Boot] Imagen no válida: '{opts.ImagePath}'. Dev, Usá --image con una ruta válida.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(opts.ImagePath) || !File.Exists(opts.ImagePath))
+                {
+                    KernelLog.Panic("[vm-Boot]: Dev, tenés pasar una imagen válida con --image");
+                    return;
+                }
+
+                if (!opts.UseNographic) KernelLog.Info("[vm-Boot] Iniciando VM en modo gráfico (no-nographic)\n");
+                Console.WriteLine("\n==================================================================================================================================");
+                Welcome();
+                Console.WriteLine("\n==================================================================================================================================");
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("✔️ Verificando imagen");
+                Console.WriteLine("✔️ Creando carpeta compartida");
+                Console.WriteLine("✔️ Montando sistema de archivos");
+                Console.WriteLine("✔️ Iniciando microkernel");
+                Console.WriteLine("✔️ Iniciando Kernel Linux");
+                Console.ResetColor();
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("Iniciando SharpCore Subsystem for Linux 🌌\n");
+                Console.ResetColor();
+
+
 
                 var qemu = new QemuBridgeConnection(opts);
                 qemu.Start();
@@ -735,7 +753,7 @@ public static class SharpCoreCLI
             }
             catch (Exception ex)
             {
-                KernelLog.Panic("[vm-start] Falló al iniciar VM en modo interactivo", ex);
+                KernelLog.Panic($"[vm-Boot] Falló al iniciar VM: {ex}");
             }
 
         }, imageOption, qemuOptionsPath);
