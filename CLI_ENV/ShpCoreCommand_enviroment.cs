@@ -730,9 +730,9 @@ public static class SharpCoreCLI
                 }
 
                 if (!opts.UseNographic) KernelLog.Info("[vm-Boot] Iniciando VM en modo gráfico (no-nographic)\n");
-                Console.WriteLine("\n==================================================================================================================================");
+                Console.WriteLine("\n======================================================================================================================================\n");
                 Welcome();
-                Console.WriteLine("\n==================================================================================================================================");
+                Console.WriteLine("\n======================================================================================================================================\n");
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("✔️ Verificando imagen");
@@ -742,7 +742,7 @@ public static class SharpCoreCLI
                 Console.WriteLine("✔️ Iniciando Kernel Linux");
                 Console.ResetColor();
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Iniciando SharpCore Subsystem for Linux 🌌\n");
+                Console.WriteLine("\nIniciando SharpCore Subsystem for Linux 🌌\n");
                 Console.ResetColor();
 
 
