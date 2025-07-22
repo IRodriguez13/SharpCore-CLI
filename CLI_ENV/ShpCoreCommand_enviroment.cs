@@ -307,7 +307,7 @@ public static class SharpCoreCLI
         vmInit.AddOption(imageOption);
         vmInit.AddOption(qemuJsonOption);
 
-#region VM Init Handler 
+        #region VM Init Handler 
         vmInit.SetHandler((string image, string qemuOptionsPath) =>
         {
             try
@@ -365,6 +365,7 @@ public static class SharpCoreCLI
         // Si se usa --dev, muestra un mensaje de depuración
         // Si no se usa --dev, ejecuta el kernel compilado
         // Ejemplo: sharpcore run --payload /path/to/payload.json --protocol namedpipe --adapter forge --dev true
+        #region Run Command Handler
         Command runCommand = new("run", "Ejecuta un payload contra el núcleo");
         runCommand.AddOption(protocolOption);
         runCommand.AddOption(adapterOption);
@@ -531,8 +532,9 @@ public static class SharpCoreCLI
             }
 
         }, payloadOption, protocolOption, adapterOption, devFlag, commandOption, imagePathOption, qemuOptionsPath, vmFlag);
-#endregion
+        #endregion
 
+        #region Comandos de CLI registrados
         // =========== Comandos del CLI registrados ===========
 
         root.AddCommand(runCommand);
@@ -562,7 +564,7 @@ public static class SharpCoreCLI
 
         await root.InvokeAsync(args);
     }
-
+    #endregion
     // =========== Métodos de ayuda y utilidades ===========
 
     private static void ShowUtils()
@@ -601,8 +603,9 @@ public static class SharpCoreCLI
         );
     }
 
-    // =========== Métodos de bienvenida y estado ===========
+    #endregion
 
+    #region Métodos de bienvenida y estado
     private static void CoreFecth()
     {
         string banner = File.ReadAllText("Short_Banner.txt");
@@ -633,6 +636,9 @@ public static class SharpCoreCLI
         Console.WriteLine($"✔ Versión activa: {File.ReadAllText(SharpCoreFM.ActiveKernelFile).Trim()}");
     }
 
+    #endregion
+
+    #region Comandos de ejecución remota y máquina virtual
     public static Command BuildRemoteRunCommand()
     {
         var cmd = new Command("run", "Ejecuta un comando contra un kernel Linux remoto");
@@ -745,6 +751,22 @@ public static class SharpCoreCLI
         return cmd;
     }
 
+    public static Command CheckGraphicSupport()
+    {
+        var cmd = new Command("check-graphic", "Verifica si el sistema soporta gráficos");
+        var portOption = new Option<int>("--port", "Puerto donde escucha el bridge (default: 5000)") { IsRequired = true };
+        cmd.SetHandler(() =>
+        {
+            var remote = new RemoteLinuxBridgeConnection($"http://127.0.0.1:{portOption}/exec");
+            var checker = new GraphicsCheckService(remote);
+            checker.RunGraphicsCheck();
+        });
+
+        return cmd;
+    }
+
+
+
     public static Command BuildDockerStartCommand()
     {
         var cmd = new Command("docker-start", "Inicia el servicio Docker dentro de la VM");
@@ -775,6 +797,7 @@ public static class SharpCoreCLI
 
         return cmd;
     }
+    #endregion
 }
 
 
