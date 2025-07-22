@@ -1,0 +1,28 @@
+name: Build & Test SharpCore CLI emvironment
+
+on:
+  push:
+    branches: [mainline-cli]
+  pull_request:
+    branches: [mainline-cli]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.x'
+
+      - name: Restore
+        run: dotnet restore SharpCore-CLI.sln
+
+      - name: Build
+        run: make build
+
+    #   - name: Test
+    #     run: dotnet test SharpCore-Kernel.sln --no-build --verbosity normal
