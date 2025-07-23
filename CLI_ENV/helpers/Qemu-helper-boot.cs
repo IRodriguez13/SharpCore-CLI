@@ -9,7 +9,7 @@ namespace SharpCore.CLI.Env.Helpers;
 
 public static class QemuOptionsLoader
 {
-    public static QemuOptions Load(string path = "qemu-options.json")
+    public static QemuOptions Load(string path = "qemu-options-default.json")
     {
         if (!File.Exists(path)) throw new FileNotFoundException("El archivo de configuración QEMU no fue encontrado", path);
         string json = File.ReadAllText(path);

@@ -27,7 +27,7 @@ public class EnvironmentDoctor
         CheckOS();
         CheckDisplay();
         CheckMount();
-        // CheckXClock(); TEMPORALLY xd
+        CheckXClock();
 
         Console.WriteLine("\n✅ Diagnóstico finalizado.");
     }
@@ -83,12 +83,13 @@ public class EnvironmentDoctor
             {
                 KernelLog.Warn("[MountCheck] Montaje no detectado en /mnt/hostshare.");
                 if (!string.IsNullOrEmpty(result?.Error))
-                    KernelLog.Panic($"[MountCheck] Error del lado de la VM: {result?.Error}");
+                    KernelLog.Panic($"[MountCheck doc-helper line:86] Error del lado de la VM: {result?.Error}");
             }
         }
         catch (Exception ex)
         {
-            KernelLog.Panic("[MountCheck] Excepción: " + ex.Message);
+            KernelLog.Panic("[MountCheck doc-helper line:91] Excepción: " + ex.Message);
+            KernelLog.Panic("[MountCheck doc-helper line:92] También puede ser que nunca hayas iniciado la VM");
         }
     }
 
@@ -113,7 +114,7 @@ public class EnvironmentDoctor
 
             if (process == null)
             {
-                KernelLog.Panic("[QEMU] No se pudo iniciar el proceso xclock.");
+                KernelLog.Panic("[QEMU doc-helper line:117] No se pudo iniciar el proceso xclock.");
                 return;
             }
 
@@ -131,7 +132,7 @@ public class EnvironmentDoctor
 
         catch (Exception ex)
         {
-            KernelLog.Panic($"[QEMU] Error al ejecutar xclock: {ex.Message}");
+            KernelLog.Panic($"[QEMU doc-helper line:135] Error al ejecutar xclock: {ex.Message}");
         }
     }
 }

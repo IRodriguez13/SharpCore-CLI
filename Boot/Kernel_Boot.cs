@@ -13,7 +13,7 @@ public static class Boot_System
 
         if (!File.Exists(kernelPath))
         {
-            KernelLog.Panic($"[CLI] El kernel activo no se encuentra en la ruta esperada: {kernelPath}");
+            KernelLog.Panic($"[CLI kernel_boot line:16] El kernel activo no se encuentra en la ruta esperada: {kernelPath}");
             return;
         }
         
@@ -24,7 +24,7 @@ public static class Boot_System
 
             if (!File.Exists(kernelPath))
             {
-                KernelLog.Panic($"[Kernel Loader] No se encontró el kernel activo en: {kernelPath}");
+                KernelLog.Panic($"[Kernel Loader kernel_boot line:27] No se encontró el kernel activo en: {kernelPath}");
                 return;
             }
 
@@ -35,13 +35,13 @@ public static class Boot_System
 
             if (method == null)
             {
-                KernelLog.Panic("[Kernel Loader] No se encontró el método 'Run' dentro del kernel.");
+                KernelLog.Panic("[Kernel Loader kernel_boot line:38] No se encontró el método 'Run' dentro del kernel.");
                 return;
             }
 
             if (type == null)
             {
-                KernelLog.Panic("[Kernel Loader] No se pudo crear una instancia del kernel.");
+                KernelLog.Panic("[Kernel Loader kernel_boot line:44] No se pudo crear una instancia del kernel.");
                 return;
             }
 
@@ -50,7 +50,7 @@ public static class Boot_System
         }
         catch (Exception ex)
         {
-            KernelLog.Panic("[Kernel Loader] Fallo al cargar el kernel compilado.", ex);
+            KernelLog.Panic("[Kernel Loader kernel_boot line:53] Fallo al cargar el kernel compilado.", ex);
         }
     }
 }
