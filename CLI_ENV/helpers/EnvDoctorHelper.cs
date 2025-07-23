@@ -27,9 +27,9 @@ public class EnvironmentDoctor
         CheckOS();
         CheckDisplay();
         CheckMount();
-        CheckXClock();
+        CheckXClock().Wait(); //pq es async
 
-        Console.WriteLine("\n✅ Diagnóstico finalizado.");
+        Console.WriteLine("\n Diagnóstico finalizado.");
     }
 
     private void CheckOS()
@@ -37,12 +37,12 @@ public class EnvironmentDoctor
         KernelLog.Info("[QEMU] Verificando sistema operativo...");
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            KernelLog.Info("👉 Sugerido: instalar VcXsrv → https://sourceforge.net/projects/vcxsrv/");
+            KernelLog.Info("- Sugerido: instalar VcXsrv → https://sourceforge.net/projects/vcxsrv/");
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             KernelLog.Info("[QEMU] Entorno macOS detectado, no se requiere instalación adicional de X11.");
-            KernelLog.Info("👉 Sugerido: instalar XQuartz → https://www.xquartz.org/");
+            KernelLog.Info("- Sugerido: instalar XQuartz → https://www.xquartz.org/");
             KernelLog.Info("Nota: Asegúrate de que XQuartz esté configurado para permitir conexiones de red.");
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -75,14 +75,17 @@ public class EnvironmentDoctor
             var resultJson = response.Content.ReadAsStringAsync().Result;
             var result = JsonSerializer.Deserialize<MountCheckResult>(resultJson);
 
-            if (result?.Mounted == true)
+
+            if (result?.mounted == true)
             {
                 KernelLog.Info("[MountCheck] Montaje de carpeta hostshare OK.");
             }
             else
             {
                 KernelLog.Warn("[MountCheck] Montaje no detectado en /mnt/hostshare.");
+
                 if (!string.IsNullOrEmpty(result?.Error))
+
                     KernelLog.Panic($"[MountCheck doc-helper line:86] Error del lado de la VM: {result?.Error}");
             }
         }
@@ -93,54 +96,58 @@ public class EnvironmentDoctor
         }
     }
 
-    private async void CheckXClock()
+   private async Task CheckXClock()
+{
+    KernelLog.Info("[QEMU] Verificando si la GUI funciona correctamente...");
+
+    var cmd = "xclock -update 1"; // sin `&`, así lo podemos trackear
+
+    var startInfo = new ProcessStartInfo
     {
-        KernelLog.Info("[QEMU] Verificando si la GUI funciona correctamente...");
+        FileName = "sh",
+        Arguments = $"-c \"{cmd}\"",
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false
+    };
 
-        var cmd = "xclock";
-        var startInfo = new ProcessStartInfo
+    try
+    {
+        var process = Process.Start(startInfo);
+        if (process == null)
         {
-            FileName = "sh",
-            Arguments = $"-c \"{cmd}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-
-        try
-        {
-            var process = Process.Start(startInfo);
-            await Task.Delay(3000);
-
-            if (process == null)
-            {
-                KernelLog.Panic("[QEMU doc-helper line:117] No se pudo iniciar el proceso xclock.");
-                return;
-            }
-
-            if (!process.HasExited)
-            {
-                KernelLog.Info("[Doctor] GUI lanzada correctamente (xclock)");
-                process.Kill();
-                KernelLog.Info("[Doctor] xclock finalizado correctamente.");
-            }
-            else
-            {
-                KernelLog.Warn("[Doctor] xclock terminó inesperadamente.");
-            }
+            KernelLog.Panic("[QEMU doc-helper line:119] No se pudo iniciar el proceso xclock.");
+            return;
         }
 
-        catch (Exception ex)
+        await Task.Delay(1200); // esperamos a que levante la GUI
+
+        if (!process.HasExited)
         {
-            KernelLog.Panic($"[QEMU doc-helper line:135] Error al ejecutar xclock: {ex.Message}");
+            KernelLog.Info("[QEMU doc-helper] GUI lanzada correctamente (xclock)");
+            process.Kill();
+            KernelLog.Info("[QEMU doc-helper] xclock finalizado correctamente.");
+        }
+        else
+        {
+            var stderr = await process.StandardError.ReadToEndAsync();
+            KernelLog.Warn($"[QEMU doc-helper] xclock terminó inesperadamente. ExitCode: {process.ExitCode}");
+            if (!string.IsNullOrWhiteSpace(stderr))
+                KernelLog.Warn($"[QEMU doc-helper] Error de xclock: {stderr}");
         }
     }
+    catch (Exception ex)
+    {
+        KernelLog.Panic($"[QEMU doc-helper line:141] Error al ejecutar xclock: {ex.Message}");
+    }
+}
+
 }
 
 
 public class MountCheckResult
 {
-    public bool Mounted { get; set; }
+    public bool mounted { get; set; } // el endpoint devuelve literalmente mounted con minusculas.
     public string? Output { get; set; }
     public string? Error { get; set; }
 }
