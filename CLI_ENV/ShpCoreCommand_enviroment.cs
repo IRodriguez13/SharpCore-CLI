@@ -88,7 +88,7 @@ public static class SharpCoreCLI
             }
             catch (Exception ex)
             {
-                KernelLog.Panic("❌ No se pudo reiniciar SharpCore.", ex);
+                KernelLog.Panic("[RESET  commandenv line:91] No se pudo reiniciar SharpCore.", ex);
             }
         },
         forceOption); // Pasa el option como argumento al handler
@@ -316,7 +316,7 @@ public static class SharpCoreCLI
 
                 if (!File.Exists(imagesDir))
                 {
-                    KernelLog.Panic($"No se encontró la imagen '{image}'. Buscada en: {imagesDir}");
+                    KernelLog.Panic($"[--IMAGE  commandenv line:319] No se encontró la imagen '{image}'. Buscada en: {imagesDir}");
                     return;
                 }
 
@@ -331,7 +331,7 @@ public static class SharpCoreCLI
             }
             catch (Exception ex)
             {
-                KernelLog.Panic($"[VM INIT] Falló el arranque de la VM", ex);
+                KernelLog.Panic($"[VM INIT commandenv line:334] Falló el arranque de la VM", ex);
             }
 
         }, imageOption, qemuJsonOption);
@@ -384,51 +384,51 @@ public static class SharpCoreCLI
 
             if (vmFlag && protocol != "vm")
             {
-                KernelLog.Panic("[--vm] Flag activa pero protocolo no es 'vm'. Usá --protocol vm");
+                KernelLog.Panic("[--vm commandenv line:387] Flag activa pero protocolo no es 'vm'. Usá --protocol vm");
                 return;
             }
 
 
             if (!SharpCoreFM.IsInitialized)
             {
-                KernelLog.Panic("SharpCore no está inicializado. Ejecutá primero `sharpcore init`.");
+                KernelLog.Panic("[--INIT commandenv line:394] SharpCore no está inicializado. Ejecutá primero `sharpcore init`.");
                 return;
             }
 
 
             if (usesFileBasedAdapter && !File.Exists(payloadPath))
             {
-                KernelLog.Panic($"(PAYLOAD) El archivo {payloadPath} no existe.");
+                KernelLog.Panic($"[PAYLOAD commandenv line:401] El archivo {payloadPath} no existe.");
                 return;
             }
 
             if (usesFileBasedAdapter && !Directory.Exists(adapterPath))
             {
-                KernelLog.Panic($"(ADAPTER) La ruta del adaptador '{adapterPath}' no existe. Asegurate de clonar el adaptador correspondiente.");
+                KernelLog.Panic($"[ADAPTER commandenv line:407] La ruta del adaptador '{adapterPath}' no existe. Asegurate de clonar el adaptador correspondiente.");
                 return;
             }
 
             if (usesFileBasedAdapter && !File.Exists(payloadPath))
             {
-                KernelLog.Panic($"[Kernel Loader] El payload no existe en la ruta: {payloadPath}");
+                KernelLog.Panic($"[Kernel Loader commandenv line:413] El payload no existe en la ruta: {payloadPath}");
                 return;
             }
 
             if (usesFileBasedAdapter && !Directory.Exists(adapterPath))
             {
-                KernelLog.Panic($"[Kernel Loader] La ruta del adaptador no existe: {adapterPath}");
+                KernelLog.Panic($"[Kernel Loader commandenv line:419] La ruta del adaptador no existe: {adapterPath}");
                 return;
             }
 
             if (!string.IsNullOrEmpty(commandInput) && !devMode)
             {
-                KernelLog.Panic("Comando directo (--cmd) solo puede utilizarse en modo desarrollador (--dev).");
+                KernelLog.Panic("[CLI: commandenv line:425]Comando directo (--cmd) solo puede utilizarse en modo desarrollador (--dev).");
                 return;
             }
 
             if (string.IsNullOrEmpty(commandInput) && string.IsNullOrEmpty(payloadPath))
             {
-                KernelLog.Panic("Debés pasar un payload (--payload) o un comando (--cmd).");
+                KernelLog.Panic("[ commandenv line:431] Debés pasar un payload (--payload) o un comando (--cmd).");
                 return;
             }
 
@@ -439,7 +439,7 @@ public static class SharpCoreCLI
                 {
                     if (string.IsNullOrEmpty(imagePath) || string.IsNullOrEmpty(qemuOptions))
                     {
-                        KernelLog.Panic("[--vm] Faltan opciones: asegurate de pasar --image-path y --qemu-options con un JSON válido.");
+                        KernelLog.Panic("[--vm commandenv line:442] Faltan opciones: asegurate de pasar --image-path y --qemu-options con un JSON válido.");
                         return;
                     }
 
@@ -456,7 +456,7 @@ public static class SharpCoreCLI
                 }
                 catch (Exception ex)
                 {
-                    KernelLog.Panic("[QEMU] Fallo al levantar la VM o ejecutar comando.", ex);
+                    KernelLog.Panic("[QEMU commandenv line:459] Fallo al levantar la VM o ejecutar comando.", ex);
                     return;
                 }
             }
@@ -464,7 +464,7 @@ public static class SharpCoreCLI
             if (devMode)
             {
 
-                KernelLog.Debug("[CLI MODE] Modo de desarrollo activado. init con Kernel referenciado localmente.");
+                KernelLog.Debug("[CLI MODE commandenv line:467] Modo de desarrollo activado. init con Kernel referenciado localmente.");
                 try
                 {
 
@@ -480,19 +480,20 @@ public static class SharpCoreCLI
                     }
 
                     // Requiere que el kernel esté referenciado en tiempo de dev
+
                     var devKernel = new SharpCoreKernel();
                     devKernel.Run(payloadPath, protocol, adapterPath, true);
 
 #else
 
-                    KernelLog.Panic("[DevMode] Dev, No se puede ejecutar en modo desarrollo sin tu kernel referenciado en el csproj.");
+                    KernelLog.Panic("[DevMode commandenv line:489] Dev, No se puede ejecutar en modo desarrollo sin tu kernel referenciado en el csproj.");
                     return;
 #endif
 
                 }
                 catch (Exception ex)
                 {
-                    KernelLog.Panic("[DevMode] Fallo crítico al ejecutar el kernel en modo desarrollo.", ex);
+                    KernelLog.Panic("[DevMode commandenv line:496] Fallo crítico al ejecutar el kernel en modo desarrollo.", ex);
                 }
 
             }
@@ -501,7 +502,7 @@ public static class SharpCoreCLI
 
                 if (!File.Exists(SharpCoreFM.ActiveKernelDll))
                 {
-                    KernelLog.Panic("Dev, No se encontró el kernel activo. Ejecutá 'sharpcore kernel-update' o 'kernel-add-local' para registrar uno.");
+                    KernelLog.Panic("[commandenv line:505]Dev, No se encontró el kernel activo. Ejecutá 'sharpcore kernel-update' o 'kernel-add-local' para registrar uno.");
                     return;
                 }
 
@@ -527,7 +528,7 @@ public static class SharpCoreCLI
                 }
                 catch (Exception ex)
                 {
-                    KernelLog.Panic("[Kernel Loader] Fallo crítico al cargar el kernel compilado.", ex);
+                    KernelLog.Panic("[Kernel Loader commandenv line:531] Fallo crítico al cargar el kernel compilado.", ex);
                 }
             }
 
@@ -554,6 +555,7 @@ public static class SharpCoreCLI
         root.AddCommand(remoteCommand);
         root.AddCommand(vmCommand);
         root.AddCommand(BuildDockerStartCommand());
+        root.AddCommand(CheckKernelStatus());
         runCommand.AddOption(imagePathOption);
         runCommand.AddOption(qemuOptionsPath);
         runCommand.AddOption(vmFlag);
@@ -695,7 +697,7 @@ public static class SharpCoreCLI
         var cmd = new Command("vm-start", "Inicia una máquina virtual SharpCore con shell interactiva");
 
         var imageOption = new Option<string>("--image", "Ruta a la imagen .qcow2") { IsRequired = true };
-        var qemuOptionsPath = new Option<string>("--qemu-options", "Ruta al JSON con opciones QEMU") { IsRequired = false };
+        var qemuOptionsPath = new Option<string>("--qemu-options", "Ruta al JSON con opciones QEMU") { IsRequired = true };
 
         cmd.AddOption(imageOption);
         cmd.AddOption(qemuOptionsPath);
@@ -704,22 +706,41 @@ public static class SharpCoreCLI
         {
             try
             {
-                var opts = QemuOptionsLoader.Load(optsPath);
+                var opts = QemuOptionsLoader.Load(optsPath); // cargo los datos del json 
+                if (string.IsNullOrEmpty(optsPath))
+                {
+                    KernelLog.Panic("[vm-boot]: Dev, el json no contiene datos de config para QEMU (Commandenv, line 711)");
+                    return;
+                }
+
+                KernelLog.Info("🧾 Opciones QEMU cargadas:");
+                KernelLog.Info(JsonSerializer.Serialize(opts, new JsonSerializerOptions { WriteIndented = true }));
+
                 opts.ImagePath = imagePath;
 
-                if (string.IsNullOrWhiteSpace(opts.ImagePath) || !File.Exists(opts.ImagePath))
+                if (opts.MemoryMb <= 0)
                 {
-                    KernelLog.Panic($"[vm-Boot] Imagen no válida: '{opts.ImagePath}'. Dev, Usá --image con una ruta válida.");
+                    KernelLog.Panic("[Json qemu-options commandenv line:723]: MemoryMb no puede ser menor o igual a 0");
+                    return;
+                }
+                if (opts.Port < 0 || opts.Port > 65535)
+                {
+                    KernelLog.Panic("[Json qemu-options commandenv line:728]: Puerto inválido");
+                    return;
+                }
+                if (string.IsNullOrWhiteSpace(opts.SharedFolder))
+                {
+                    KernelLog.Panic("[Json qemu-options commandenv line:733]: Falta SharedFolder");
                     return;
                 }
 
-                if (string.IsNullOrWhiteSpace(opts.ImagePath) || !File.Exists(opts.ImagePath))
+                if (!File.Exists(opts.ImagePath))
                 {
-                    KernelLog.Panic("[vm-Boot]: Dev, tenés pasar una imagen válida con --image");
+                    KernelLog.Panic("[vm-Boot commandenv line:739]: Dev, tenés pasar una imagen válida con --image");
                     return;
                 }
 
-                if (!opts.UseNographic) KernelLog.Info("[vm-Boot] Iniciando VM en modo gráfico (no-nographic)\n");
+                if (!opts.UseNographic) KernelLog.Info("[vm-Boot commandenv line:743] Iniciando VM en modo gráfico (no-nographic)\n");
                 Console.WriteLine("\n======================================================================================================================================\n");
                 Welcome();
                 Console.WriteLine("\n======================================================================================================================================\n");
@@ -743,13 +764,32 @@ public static class SharpCoreCLI
             }
             catch (Exception ex)
             {
-                KernelLog.Panic($"[vm-Boot] Falló al iniciar VM: {ex}");
+                KernelLog.Panic($"[vm-Boot commandenv line:767] Falló al iniciar VM: {ex}");
             }
 
         }, imageOption, qemuOptionsPath);
 
         return cmd;
     }
+
+    #region Métodos de health check y utilidades
+    public static Command CheckKernelStatus()
+    {
+        var cmd = new Command("--doctor", "Verifica el health check del núcleo y su entorno para portabilidad y soporte gráfico");
+        cmd.AddAlias("--check");
+        cmd.AddAlias("--health");
+        cmd.AddAlias("--doc");
+
+        cmd.SetHandler(() =>
+        {
+            var options = QemuOptionsLoader.Load();
+            var doctor = new EnvironmentDoctor(options);
+            doctor.RunFullCheck();
+        });
+
+        return cmd;
+    }
+    #endregion
 
     public static Command CheckGraphicSupport()
     {
@@ -790,7 +830,7 @@ public static class SharpCoreCLI
             }
             catch (Exception ex)
             {
-                KernelLog.Panic("[docker-start] No se pudo iniciar Docker en la VM", ex);
+                KernelLog.Panic("[docker-start commandenv line:833] No se pudo iniciar Docker en la VM", ex);
             }
 
         }, portOpt);
@@ -798,6 +838,8 @@ public static class SharpCoreCLI
         return cmd;
     }
     #endregion
+
+
 }
 
 

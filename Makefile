@@ -1,14 +1,26 @@
-vm-start:
-	dotnet run --project ./ShpCore.CLI.csproj vm vm-start --image ./Output/alpine-sharpcore.qcow2
+# Makefile para SharpCore CLI
 
-vm-test:
-	dotnet run --project ./ShpCore.CLI.csproj vm vm-test
-
-test:
-	dotnet test ./ShpCore.Kernel.Tests.csproj
+.PHONY: build run vm-start test doctor
 
 build:
-	dotnet build ./ShpCore.CLI.csproj
+	dotnet build ./ShpCore.CLI.csproj 
 
-shutdown:
-	dotnet run --project ./ShpCore.CLI.csproj vm vm-shutdown
+run:
+	dotnet run --project ./ShpCore.CLI.csproj
+
+vm-start:
+	dotnet run --project ./ShpCore.CLI.csproj -- vm vm-start --image /home/ivanr013/Escritorio/dev/SSL-Environment/Output/alpine-sharpcore.qcow2 --qemu-options qemu-options-default.json 
+
+vm-init:
+	dotnet run --project ./ShpCore.CLI.csproj -- vm vm-init --image /home/ivanr013/Escritorio/dev/SSL-Environment/Output/alpine-sharpcore.qcow2
+
+vm-start--silent:
+	dotnet run --project ./ShpCore.CLI.csproj -- vm vm-start --image /home/ivanr013/Escritorio/dev/SSL-Environment/Output/alpine-sharpcore.qcow2 --silent
+
+
+test:
+	dotnet test
+
+doctor:
+	dotnet run --project ./ShpCore.CLI.csproj --doctor
+

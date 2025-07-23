@@ -9,25 +9,14 @@ namespace SharpCore.CLI.Env.Helpers;
 
 public static class QemuOptionsLoader
 {
-    public static QemuOptions Load(string? path = null)
+    public static QemuOptions Load(string path = "qemu-options.json")
     {
-        if (!string.IsNullOrEmpty(path) && File.Exists(path))
+        if (!File.Exists(path)) throw new FileNotFoundException("El archivo de configuración QEMU no fue encontrado", path);
+        string json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<QemuOptions>(json, new JsonSerializerOptions
         {
-            KernelLog.Info($"[QEMU] Cargando opciones desde {path}");
-            return JsonSerializer.Deserialize<QemuOptions>(File.ReadAllText(path)) ?? new QemuOptions();
-        }
-
-        // Ruta default
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        string defaultPath = Path.Combine(home, ".sharpcore", "config", "qemu-options-default.json");
-
-        if (File.Exists(defaultPath))
-        {
-            KernelLog.Info($"[QEMU] Usando configuración default desde {defaultPath}");
-            return JsonSerializer.Deserialize<QemuOptions>(File.ReadAllText(defaultPath)) ?? new QemuOptions();
-        }
-
-        KernelLog.Info("[QEMU] Usando configuración embebida por defecto");
-        return new QemuOptions(); // fallback hardcoded
+            PropertyNameCaseInsensitive = true
+        }) ?? throw new Exception("Error deserializando opciones de QEMU");
     }
 }
+
