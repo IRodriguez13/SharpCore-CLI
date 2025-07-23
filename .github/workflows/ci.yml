@@ -21,8 +21,8 @@ jobs:
       - name: Restore
         run: dotnet restore SharpCore-CLI.sln
 
-      - name: Build
-        run: make build
+      # - name: Build porque se rompe si no esta linked con el microkernel
+      #   run: make build
 
     #   - name: Test
     #     run: dotnet test SharpCore-Kernel.sln --no-build --verbosity normal
