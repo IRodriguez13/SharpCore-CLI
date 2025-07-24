@@ -706,7 +706,10 @@ public static class SharpCoreCLI
         {
             try
             {
-                var opts = QemuOptionsLoader.Load(optsPath); // cargo los datos del json 
+                #region ignore this null advice
+                var opts = QemuOptionsLoader.Load(optsPath); // loads qemu args from qemu-options-default.json. ignore the null cause Load() prevents this
+                #endregion
+
                 if (string.IsNullOrEmpty(optsPath))
                 {
                     KernelLog.Panic("[vm-boot]: Dev, el json no contiene datos de config para QEMU (Commandenv, line 711)");

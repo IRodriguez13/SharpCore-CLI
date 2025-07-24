@@ -21,15 +21,21 @@ public class EnvironmentDoctor
 
     public void RunFullCheck()
     {
-        Console.WriteLine("🩺 SharpCore Doctor - Diagnostic Tool");
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("\n------------------------------------");
+
+        Console.WriteLine("SSL Doctor Diagnostics Tool");
         Console.WriteLine("------------------------------------");
+        Console.ResetColor();
 
         CheckOS();
         CheckDisplay();
         CheckMount();
-        CheckXClock().Wait(); //pq es async
+        CheckXClock().Wait(); // yep, the clocx process normally async
 
-        Console.WriteLine("\n Diagnóstico finalizado.");
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("\n Diagnóstico finalizado.\n");
+        Console.ResetColor();
     }
 
     private void CheckOS()
@@ -96,51 +102,51 @@ public class EnvironmentDoctor
         }
     }
 
-   private async Task CheckXClock()
-{
-    KernelLog.Info("[QEMU] Verificando si la GUI funciona correctamente...");
-
-    var cmd = "xclock -update 1"; // sin `&`, así lo podemos trackear
-
-    var startInfo = new ProcessStartInfo
+    private async Task CheckXClock()
     {
-        FileName = "sh",
-        Arguments = $"-c \"{cmd}\"",
-        RedirectStandardOutput = true,
-        RedirectStandardError = true,
-        UseShellExecute = false
-    };
+        KernelLog.Info("[QEMU] Verificando si la GUI funciona correctamente...");
 
-    try
-    {
-        var process = Process.Start(startInfo);
-        if (process == null)
+        var cmd = "xclock -update 1"; // sin `&`, así lo podemos trackear
+
+        var startInfo = new ProcessStartInfo
         {
-            KernelLog.Panic("[QEMU doc-helper line:119] No se pudo iniciar el proceso xclock.");
-            return;
+            FileName = "sh",
+            Arguments = $"-c \"{cmd}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+
+        try
+        {
+            var process = Process.Start(startInfo);
+            if (process == null)
+            {
+                KernelLog.Panic("[QEMU doc-helper line:119] No se pudo iniciar el proceso xclock.");
+                return;
+            }
+
+            await Task.Delay(1200); // esperamos a que levante la GUI
+
+            if (!process.HasExited)
+            {
+                KernelLog.Info("[QEMU doc-helper] GUI lanzada correctamente (xclock)");
+                process.Kill();
+                KernelLog.Info("[QEMU doc-helper] xclock finalizado correctamente.");
+            }
+            else
+            {
+                var stderr = await process.StandardError.ReadToEndAsync();
+                KernelLog.Warn($"[QEMU doc-helper] xclock terminó inesperadamente. ExitCode: {process.ExitCode}");
+                if (!string.IsNullOrWhiteSpace(stderr))
+                    KernelLog.Warn($"[QEMU doc-helper] Error de xclock: {stderr}");
+            }
         }
-
-        await Task.Delay(1200); // esperamos a que levante la GUI
-
-        if (!process.HasExited)
+        catch (Exception ex)
         {
-            KernelLog.Info("[QEMU doc-helper] GUI lanzada correctamente (xclock)");
-            process.Kill();
-            KernelLog.Info("[QEMU doc-helper] xclock finalizado correctamente.");
-        }
-        else
-        {
-            var stderr = await process.StandardError.ReadToEndAsync();
-            KernelLog.Warn($"[QEMU doc-helper] xclock terminó inesperadamente. ExitCode: {process.ExitCode}");
-            if (!string.IsNullOrWhiteSpace(stderr))
-                KernelLog.Warn($"[QEMU doc-helper] Error de xclock: {stderr}");
+            KernelLog.Panic($"[QEMU doc-helper line:141] Error al ejecutar xclock: {ex.Message}");
         }
     }
-    catch (Exception ex)
-    {
-        KernelLog.Panic($"[QEMU doc-helper line:141] Error al ejecutar xclock: {ex.Message}");
-    }
-}
 
 }
 
