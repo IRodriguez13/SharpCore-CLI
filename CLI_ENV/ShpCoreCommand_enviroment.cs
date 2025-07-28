@@ -706,9 +706,9 @@ public static class SharpCoreCLI
         {
             try
             {
-                #region ignore this null advice
+                #nullable disable
                 var opts = QemuOptionsLoader.Load(optsPath); // loads qemu args from qemu-options-default.json. ignore the null cause Load() prevents this
-                #endregion
+                #nullable enable
 
                 if (string.IsNullOrEmpty(optsPath))
                 {
