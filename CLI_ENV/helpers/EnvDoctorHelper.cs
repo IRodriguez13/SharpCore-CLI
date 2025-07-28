@@ -31,7 +31,7 @@ public class EnvironmentDoctor
         CheckOS();
         CheckDisplay();
         CheckMount();
-        CheckXClock().Wait(); // yep, the clocx process normally async
+        CheckXClock().Wait(); // yep, CheckXClock process normally async
 
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("\n Diagnóstico finalizado.\n");

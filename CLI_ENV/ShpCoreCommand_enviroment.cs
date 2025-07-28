@@ -745,7 +745,7 @@ public static class SharpCoreCLI
 
                 if (!opts.UseNographic) KernelLog.Info("[vm-Boot commandenv line:743] Iniciando VM en modo gráfico (no-nographic)\n");
                 Console.WriteLine("\n======================================================================================================================================\n");
-                Welcome();
+                CoreFecth();
                 Console.WriteLine("\n======================================================================================================================================\n");
 
                 Console.ForegroundColor = ConsoleColor.Green;
