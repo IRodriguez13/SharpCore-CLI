@@ -556,6 +556,7 @@ public static class SharpCoreCLI
         root.AddCommand(vmCommand);
         root.AddCommand(BuildDockerStartCommand());
         root.AddCommand(CheckKernelStatus());
+        root.AddCommand(CheckKernelStatusIsolate());
         runCommand.AddOption(imagePathOption);
         runCommand.AddOption(qemuOptionsPath);
         runCommand.AddOption(vmFlag);
@@ -788,6 +789,20 @@ public static class SharpCoreCLI
             var options = QemuOptionsLoader.Load();
             var doctor = new EnvironmentDoctor(options);
             doctor.RunFullCheck();
+        });
+
+        return cmd;
+    }
+    public static Command CheckKernelStatusIsolate()
+    {
+        var cmd = new Command("--doctor-iso", "Verifica el health check del núcleo y su entorno para portabilidad y soporte gráfico");
+        cmd.AddAlias("--isolate");
+
+        cmd.SetHandler(() =>
+        {
+            var options = QemuOptionsLoader.Load();
+            var doctor = new EnvironmentDoctor(options);
+            doctor.RunIsolateCheck();
         });
 
         return cmd;

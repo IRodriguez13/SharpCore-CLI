@@ -37,6 +37,22 @@ public class EnvironmentDoctor
         Console.WriteLine("\n Diagnóstico finalizado.\n");
         Console.ResetColor();
     }
+    public void RunIsolateCheck()
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("\n------------------------------------");
+
+        Console.WriteLine("SSL Doctor Diagnostics Tool (without gui check)");
+        Console.WriteLine("------------------------------------");
+        Console.ResetColor();
+
+        CheckOS();
+        CheckMount();
+
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("\n Diagnóstico finalizado.\n");
+        Console.ResetColor();
+    }
 
     private void CheckOS()
     {

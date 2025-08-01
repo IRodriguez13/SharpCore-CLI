@@ -24,3 +24,7 @@ test:
 doctor:
 	dotnet run --project ./ShpCore.CLI.csproj --doctor
 
+
+doctor isolate:
+	dotnet run --project ./ShpCore.CLI.csproj --doctor-iso
+	
